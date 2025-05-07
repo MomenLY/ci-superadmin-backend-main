@@ -1,0 +1,15 @@
+export const NODE_ENV = process.env.NODE_ENV;
+export const PORT = parseInt(process.env.PORT, 10) || 8000;
+export const DB_TYPE = process.env.DB_TYPE;
+export const POSTGRES_HOST = process.env.POSTGRES_HOST;
+export const POSTGRES_PORT = parseInt(process.env.POSTGRES_PORT, 10);
+export const POSTGRES_USER = process.env.POSTGRES_USER;
+export const POSTGRES_PASSWORD = process.env.POSTGRES_PASSWORD;
+export const MONGODB_CONNECTION_STRING = process.env.MONGODB_CONNECTION_STRING;
+export const DATABASE_NAME = process.env.DATABASE_NAME;
+export const JWT_SECRET = process.env.JWT_SECRET;
+export const AWS_S3_KEY = process.env.AWS_S3_KEY;
+export const AWS_S3_SECRET = process.env.AWS_S3_SECRET;
+export const AWS_S3_REGION = process.env.AWS_S3_REGION;
+export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
+export const AWS_HELPER_FN = process.env.AWS_HELPER_FN;
