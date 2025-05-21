@@ -195,6 +195,7 @@ export class UsersHelper {
     const role = await this.roleRepository.findOne({
       where: { roleType: RoleType.ENDUSER },
     });
+    console.log(role, 'role');
     if (role) {
       const roleId = role._id;
       let usersToSave = [];

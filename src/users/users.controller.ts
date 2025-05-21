@@ -56,6 +56,7 @@ export class UsersController {
   @CreateUser()
   @Post()
   async create(@Request() req, @Body() createUserDto: CreateUserDto) {
+    console.log(createUserDto, 'create user dto');
     return this.usersHelper
       .bulkCreate(req.user, [createUserDto])
       .then((result) => {
