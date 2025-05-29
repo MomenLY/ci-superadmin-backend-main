@@ -10,18 +10,12 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
     ConfigModule,
     TypeOrmModule.forRootAsync({
       useFactory: async (configService: ConfigService) => {
-        // const primaryDBentities = configService.get(
-        //   'PRIMARY_DB_ENTITIES',
-        // ) as string[];
-        // const regexPattern = new RegExp(primaryDBentities.join('|'));
         const entities = getMetadataArgsStorage()
           // eslint-disable-next-line @typescript-eslint/ban-types
           .tables.map((tbl) => tbl.target as Function)
           .filter((entity) => {
             return (
               entity.toString().toLowerCase().includes('entity')
-              // entity.toString().toLowerCase().includes('entity') &&
-              // regexPattern.test(entity.name)
             );
           });
 
@@ -29,7 +23,6 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
           type: 'mongodb',
           url: configService.get('MONGODB_CONNECTION_STRING'),
           database: TENANT_INFO.name,
-          // database: configService.get('DATABASE_NAME'),
           entities,
           logging: true,
           autoLoadEntities: true,
@@ -40,4 +33,4 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
   ],
   exports: [TypeOrmModule],
 })
-export class MongoModule {}
+export class MongoModule { }

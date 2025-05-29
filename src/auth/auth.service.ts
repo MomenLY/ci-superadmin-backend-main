@@ -22,7 +22,7 @@ export class AuthService {
     private connection: DataSource,
     private configService: ConfigService,
     private readonly settingsService: SettingsService,
-  ) {}
+  ) { }
 
   async signIn(
     email: string,
@@ -31,7 +31,6 @@ export class AuthService {
   ): Promise<any> {
     const IDENTIFY_TENANT_FROM_PRIMARY_DB =
       this.configService.get('IDENTIFY_TENANT_FROM_PRIMARY_DB') === 'true';
-
     if (IDENTIFY_TENANT_FROM_PRIMARY_DB) {
       const tenantUser = await this.tenantUserService.findOneByEmail(email);
       if (tenantUser) {
@@ -41,7 +40,6 @@ export class AuthService {
       }
     }
 
-    // const tenant: Tenant = await findTenant(this.connection, xTenantId);
     const tenant = TENANT_INFO;
     if (!tenant) {
       throw new BadRequestException(ErrorMessages.DATABASE_CONNECTION_ERROR);
@@ -66,7 +64,7 @@ export class AuthService {
       where: { AsKey: 'password' },
     });
 
-    const user = await _userRepository.findOne({ where: { email } });
+    const user = await _userRepository.findOne({ where: { email: email.toLowerCase() } });
     await dataSource.destroy();
 
     if (!user) {
@@ -81,7 +79,6 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
     };
-
     if (
       (result.AsSetting.settings.resetPasswordAfterFirstLogin === true ||
         result.AsSetting.settings
@@ -95,10 +92,12 @@ export class AuthService {
         access_token: await this.jwtService.signAsync(payload),
         user: {
           uuid: user._id,
-          role: 'user',
+          role: 'admin',
+          roleId: user.roleIds,
           data: {
             displayName: user.firstName + ' ' + user.lastName,
             email: user.email,
+            userImage: user.userImage
           },
         },
       };
@@ -110,10 +109,12 @@ export class AuthService {
       tenant: xTenantId,
       user: {
         uuid: user._id,
-        role: 'user',
+        role: 'admin',
+        roleId: user.roleIds,
         data: {
           displayName: user.firstName + ' ' + user.lastName,
           email: user.email,
+          userImage: user.userImage
         },
       },
     };

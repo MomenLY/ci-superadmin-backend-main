@@ -11,7 +11,7 @@ import { AccountSettings } from './entities/setting.entity';
 import { Repository } from 'typeorm';
 import { SettingsLibrary } from 'src/utils/settingsLibrary';
 import { TENANT_CONNECTION } from 'src/tenant/tenant.module';
-import { delCache, getCache } from 'memcachelibrarybeta';
+import { delCache, getCache } from 'onioncache';
 import { ErrorMessages } from 'src/utils/messages';
 import { GlobalService } from 'src/utils/global.service';
 
@@ -20,7 +20,7 @@ export class SettingsService {
   private Settings: Repository<AccountSettings>;
   constructor(
     private settingsService: SettingsLibrary,
-    @Inject(TENANT_CONNECTION) private connection,
+    @Inject(TENANT_CONNECTION) private connection, private readonly globalService: GlobalService
   ) {
     this.Settings = this.connection.getRepository(AccountSettings);
   }
@@ -40,7 +40,7 @@ export class SettingsService {
         key: 'version',
         settings: { version },
       };
-      settingsVer.AsAccountId = GlobalService.accountId;
+      settingsVer.AsAccountId = this.globalService.accountId;
 
       await this.Settings.save(settingsVer);
     } else {
@@ -54,7 +54,7 @@ export class SettingsService {
 
     try {
       await delCache('version');
-    } catch (error) {}
+    } catch (error) { }
 
     return version;
   }
@@ -76,7 +76,7 @@ export class SettingsService {
         const settings = new AccountSettings();
         settings.AsKey = AsKey;
         settings.AsSetting = AsSetting;
-        settings.AsAccountId = GlobalService.accountId;
+        settings.AsAccountId = this.globalService.accountId;
 
         const result = await this.Settings.save(settings);
 
@@ -117,7 +117,7 @@ export class SettingsService {
     const { AsSetting } = updateSettingDto;
     try {
       await delCache(key);
-    } catch (error) {}
+    } catch (error) { }
     const settingsToUpdate = await this.Settings.findOne({
       where: { AsKey: key },
     });
@@ -125,7 +125,7 @@ export class SettingsService {
       throw new BadRequestException(ErrorMessages.NO_SETTING_TO_UPDATE);
     } else {
       settingsToUpdate.AsSetting = AsSetting;
-      settingsToUpdate.AsAccountId = GlobalService.accountId;
+      settingsToUpdate.AsAccountId = this.globalService.accountId;
       const updatedSettings = await this.Settings.save(settingsToUpdate);
       const version = await this.updateSettingsVersion();
       return { ...updatedSettings, version };

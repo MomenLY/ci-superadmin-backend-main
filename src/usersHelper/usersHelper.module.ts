@@ -7,9 +7,10 @@ import { ProfileFieldsModule } from 'src/profileFields/profileFields.module';
 import { UsersMongoHelper } from './users.mongo.helper';
 import { UsersPostgresHelper } from './users.postgres.helper';
 import { TenantUsersModule } from 'src/tenant/modules/tenant-users/tenant-users.module';
+import { SettingsModule } from 'src/settings/settings.module';
 
 @Module({
-  imports: [ProfileModule, ProfileFieldsModule, TenantUsersModule],
+  imports: [ProfileModule, ProfileFieldsModule, TenantUsersModule, SettingsModule],
   providers: [EmailLibrary, UsersHelper, CaslAbilityFactory, UsersMongoHelper, UsersPostgresHelper],
   exports: [UsersHelper],
 })

@@ -1,4 +1,9 @@
+import { Injectable, Scope } from '@nestjs/common';
+
+@Injectable({ scope: Scope.REQUEST })
 export class GlobalService {
-  static accountId: string = '';
-  static emailSubscription: any = '';
+  accountId: string = '';
+  identifier: string = '';
+  emailSubscription: any = '';
+  featuresRestrictions: any = '';
 }

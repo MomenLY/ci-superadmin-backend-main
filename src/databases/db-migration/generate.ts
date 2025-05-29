@@ -49,7 +49,7 @@ function traverseDirectory(
   currentPath: string,
   files: string[],
   entityFilePaths: string[],
-  cb = () => {},
+  cb = () => { },
 ) {
   try {
     if (files.length > 0) {
@@ -106,7 +106,7 @@ const recurMigrationProcess = async (
   tenants: any[],
   migrationName: string,
   template: string,
-  cb = () => {},
+  cb = () => { },
 ) => {
   try {
     if (tenants.length > 0) {
@@ -131,17 +131,6 @@ const GenerateMigrations = async (migrationName) => {
 
     let tenants: any = [];
     if (TARGET_DB === 'superadmin-db') {
-      // let pool = new Pool({
-      //   user: dbUsername,
-      //   host: dbHost,
-      //   database: dbName,
-      //   password: dbPassword,
-      //   port: dbPort,
-      // });
-      // const res = await pool.query('SELECT * FROM tenant');
-      // tenants = res.rows;
-      // await pool.end();
-      // pool = null;
       tenants = [TENANT_INFO];
       if (tenants.length === 0) {
         process.exit(0);
@@ -217,7 +206,7 @@ const init = async () => {
       .help().argv;
     TARGET_DB = argv.target || TARGET_DB;
     GenerateMigrations(argv.name);
-  } catch (error) {}
+  } catch (error) { }
 };
 
 init();

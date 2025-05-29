@@ -15,6 +15,8 @@ import { IPaginationOptions, Pagination } from 'nestjs-typeorm-paginate';
 import { User } from 'src/users/entities/user.entity';
 import { RoleMongoService } from './role.mongo.service';
 import { RolePostgresService } from './role.postgres.service';
+import adminModules from 'src/utils/admin.module';
+import userModules from 'src/utils/user.module';
 
 @Injectable()
 export class RoleService {
@@ -22,8 +24,8 @@ export class RoleService {
   private userRepository: Repository<User> & MongoRepository<User>;
 
   constructor(
-    @Inject(TENANT_CONNECTION) private connection, 
-    private roleMongoService:RoleMongoService, 
+    @Inject(TENANT_CONNECTION) private connection,
+    private roleMongoService: RoleMongoService,
     private rolePostgresService: RolePostgresService) {
     this.roleRepository = this.connection.getRepository(Role);
     this.userRepository = this.connection.getRepository(User);
@@ -53,7 +55,7 @@ export class RoleService {
 
     for (const roleData of roles) {
       let role;
-      if(isMongoDB) {
+      if (isMongoDB) {
         role = await this.roleMongoService.findOneById(this.roleRepository, roleData._id)
       } else {
         role = await this.rolePostgresService.findOneById(this.roleRepository, roleData._id)
@@ -69,69 +71,6 @@ export class RoleService {
 
     return updatedRoles;
   }
-
-  // async paginate(
-  //   options: IPaginationOptions,
-  //   sortBy?: string,
-  //   orderBy?: 'asc' | 'desc',
-  // ): Promise<Pagination<RoleDto>> {
-  //   const page = Number(options.page);
-  //   const limit = Number(options.limit);
-
-  //   if (this.roleRepository instanceof MongoRepository) {
-  //     const sortOptions: { [key: string]: 1 | -1 } = {};
-
-  //     if (sortBy) {
-  //       sortOptions[sortBy] = orderBy === 'asc' ? 1 : -1;
-  //     }
-
-  //     const [items, totalItems] = await this.roleRepository.findAndCount({
-  //       skip: (page - 1) * limit,
-  //       take: limit,
-  //       // sort: sortOptions,
-  //     });
-
-  //     const roles = items.map((role) => new RoleDto(role));
-
-  //     return {
-  //       items: roles,
-  //       meta: {
-  //         totalItems,
-  //         itemCount: items.length,
-  //         itemsPerPage: limit,
-  //         totalPages: Math.ceil(totalItems / limit),
-  //         currentPage: page,
-  //       },
-  //     };
-  //   } else {
-  //     const roleRepository = this.roleRepository as Repository<Role>;
-  //     const queryBuilder = roleRepository
-  //       .createQueryBuilder('Role')
-  //       .skip((page - 1) * limit)
-  //       .take(limit);
-
-  //     if (sortBy) {
-  //       const order = orderBy ? orderBy.toUpperCase() : 'ASC';
-  //       if (order === 'ASC' || order === 'DESC') {
-  //         queryBuilder.orderBy(`Role.${sortBy}`, order);
-  //       }
-  //     }
-
-  //     const [items, totalItems] = await queryBuilder.getManyAndCount();
-  //     const roles = items.map((role) => new RoleDto(role));
-
-  //     return {
-  //       items: roles,
-  //       meta: {
-  //         totalItems,
-  //         itemCount: items.length,
-  //         itemsPerPage: limit,
-  //         totalPages: Math.ceil(totalItems / limit),
-  //         currentPage: page,
-  //       },
-  //     };
-  //   }
-  // }
 
   async searchAndPaginate(
     options: IPaginationOptions,
@@ -151,7 +90,7 @@ export class RoleService {
   }
 
   async findByIds(ids: string[]) {
-    if(isMongoDB) {
+    if (isMongoDB) {
       return this.roleMongoService.findByIds(this.roleRepository, ids);
     } else {
       return this.rolePostgresService.findByIds(this.roleRepository, ids);
@@ -174,10 +113,9 @@ export class RoleService {
   }
 
   async bulkDeleteRoles(roleIds: string[]): Promise<{ message: string }> {
-    console.log('bulk delete....................');
 
     let existingRoles = [];
-    if(isMongoDB) {
+    if (isMongoDB) {
       existingRoles = await this.roleMongoService.findByIds(this.roleRepository, roleIds)
     } else {
       existingRoles = await this.rolePostgresService.findByIds(this.roleRepository, roleIds)
@@ -214,17 +152,14 @@ export class RoleService {
     sortBy?: string,
     orderBy?: 'asc' | 'desc',
   ): Promise<Pagination<RoleDto>> {
-    console.log(" params for pagination, search", keyword, options);
-    try{
-    const page = Number(options.page);
-    const limit = Number(options.limit);
+    try {
+      const page = Number(options.page);
+      const limit = Number(options.limit);
       if (isMongoDB) {
         const response = await this.roleMongoService.usersByRoleMongo(this.userRepository, keyword, type, sortBy, orderBy, limit, page);
-        console.log(response, "from mongo");
         return response;
       } else {
         const response = await this.rolePostgresService.usersByRolePostgres(this.roleRepository, keyword, type, sortBy, orderBy, limit, page);
-        console.log(response, "from postgres");
         return response;
       }
     } catch (error) {
@@ -237,4 +172,16 @@ export class RoleService {
     return this.roleRepository.delete(id);
   }
 
+  async getRoleModules(roleType: string) {
+    try {
+      const roleModules = {
+        admin: adminModules,
+        enduser: userModules
+      };
+      return typeof roleModules[roleType] !== "undefined" ? roleModules[roleType] : {}
+    }
+    catch (error) {
+      throw error;
+    }
+  }
 }

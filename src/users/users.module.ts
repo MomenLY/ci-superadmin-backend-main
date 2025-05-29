@@ -18,6 +18,9 @@ import { UsersHelperModule } from 'src/usersHelper/usersHelper.module';
 import { ProfileFieldsModule } from 'src/profileFields/profileFields.module';
 import { UsersMongoService } from './users.mongo.service';
 import { UsersPostgresService } from './users.postgres.service';
+import { GlobalService } from 'src/utils/global.service';
+import { SettingsService } from 'src/settings/settings.service';
+import { SettingsModule } from 'src/settings/settings.module';
 @Module({
   imports: [
     RoleModule,
@@ -37,10 +40,11 @@ import { UsersPostgresService } from './users.postgres.service';
     }),
     TenantsModule,
     UsersHelperModule,
-    ProfileFieldsModule
+    ProfileFieldsModule,
+    SettingsModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService, EmailLibrary, UsersMongoService, UsersPostgresService],
+  providers: [UsersService, EmailLibrary, UsersMongoService, UsersPostgresService, GlobalService],
   exports: [UsersService],
 })
 export class UsersModule {}

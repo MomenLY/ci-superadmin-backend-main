@@ -31,20 +31,17 @@ import { BulkUpdateUserDto, UpdateUserDto } from './dto/update-user.dto';
 import { PoliciesGuard } from 'src/casl/policies.guard';
 import { CheckPolicies } from 'src/casl/casl.decorator';
 import { UsersHelper } from '../usersHelper/users.helper';
-// import { AuthGuard } from '@nestjs/passport';
-// import { UseGuards } from '@nestjs/common';
 
 @Controller('users')
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly usersHelper: UsersHelper,
-  ) {}
+  ) { }
 
   @Get('profile')
   getProfile(@Request() request) {
     if (process.env.DB_TYPE === 'postgres') {
-      console.log(request.user._id, 'in profile,,,,,,');
 
       return this.usersService.Validate(request.user._id);
     } else {
@@ -53,10 +50,15 @@ export class UsersController {
     }
   }
 
+  @Get('session')
+  getSessions(@Request() request, @Query('roleId') roleId?: string) {
+    return this.usersService.getSession(request, roleId);
+  }
+
+
   @CreateUser()
   @Post()
   async create(@Request() req, @Body() createUserDto: CreateUserDto) {
-    console.log(createUserDto, 'create user dto');
     return this.usersHelper
       .bulkCreate(req.user, [createUserDto])
       .then((result) => {
@@ -116,6 +118,7 @@ export class UsersController {
   deleteUser(@Request() req, @Param('id') id: string) {
     return this.usersHelper.bulkDelete(req.user, [id]);
   }
+
   @Get()
   async findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
@@ -159,8 +162,6 @@ export class UsersController {
     @Param('token') token?: string,
     @Request() req?,
   ) {
-    console.log(token,'inside with tokennn');
-    
     return this.usersService.resetPassword(resetPassword, token, undefined);
   }
 
@@ -169,8 +170,6 @@ export class UsersController {
     @Body() resetPassword: ResetPasswordDTO,
     @Request() req,
   ) {
-    console.log("without tokennnn");
-    
     return this.usersService.resetPassword(
       resetPassword,
       undefined,

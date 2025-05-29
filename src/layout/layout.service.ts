@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { SettingsService } from 'src/settings/settings.service';
+import { GlobalService } from 'src/utils/global.service';
 
 @Injectable()
 export class LayoutService {
-  constructor(private settingsService: SettingsService) { }
+  constructor(private settingsService: SettingsService, private readonly globalService: GlobalService,
+  ) { }
 
   async getLayout() {
     const pageLayout = await this.settingsService
@@ -205,6 +207,8 @@ export class LayoutService {
       authLayout: authLayout?.settings?.layout || 'modern',
       cloudFrontUrl: 'https://dmyhz7upeha6d.cloudfront.net',
       version: versionSetting?.settings?.version || 1,
+      logoPath: 'uploads/ci/superAdmin/logo/',
+      assetUrl: pageLayout?.settings?.assetUrl
     };
   }
 }

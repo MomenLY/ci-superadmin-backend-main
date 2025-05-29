@@ -27,7 +27,6 @@ export class TodosController {
     storage: diskStorage({
       destination: './uploads',
       filename: (req, file, callback) => {
-        console.log(req.body.fileName);
         return callback(null, `${req.body.fileName}`);
 
       }

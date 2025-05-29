@@ -22,6 +22,8 @@ import { LanguagesModule } from './languages/languages.module';
 import { PasswordTokenModule } from './password-token/password-token.module';
 import { ProfileModule } from './profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { ExcelModule } from './excel/excel.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -47,6 +49,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     LanguagesModule,
     PasswordTokenModule,
     ProfileModule,
+    OnboardingModule,
+    ExcelModule,
   ],
   controllers: [AppController],
   providers: [

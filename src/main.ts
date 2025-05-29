@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { connectCache } from 'memcachelibrarybeta';
+import { connectCache } from 'onioncache';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
@@ -16,7 +16,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  await app.listen(process.env.PORT || 3001).then(() => {
+  await app.listen(process.env.PORT || 8000).then(() => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
 }

@@ -58,20 +58,6 @@ describe('RoleService', () => {
     });
   });
 
-  // describe('findByIds', () => {
-  //   it('should return roles by ids', async () => {
-  //     const ids = [new ObjectId().toString('hex'), new ObjectId().toString('hex')];
-  //     console.log(ids)
-  //     const roles = [new Role(), new Role()];
-  //     jest.spyOn(roleRepository, 'findByIds').mockResolvedValue(roles);
-
-  //     const result = await service.findByIds(ids);
-
-  //     expect(result).toEqual(roles);
-  //     expect(roleRepository.findByIds).toHaveBeenCalledWith(ids);
-  //   });
-  // });
-
   describe('findOne', () => {
     it('should return a role by id', async () => {
       const id = '1';

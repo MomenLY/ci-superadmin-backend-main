@@ -39,7 +39,7 @@ export class RoleMongoService {
     };
   }
 
-  async usersByRoleMongo(roleRepository: any, keyword: any, type: any, sortBy:any, orderBy: any, limit:any, page:any) {
+  async usersByRoleMongo(roleRepository: any, keyword: any, type: any, sortBy: any, orderBy: any, limit: any, page: any) {
     try {
       const pipeline = [
         {
@@ -100,21 +100,20 @@ export class RoleMongoService {
           }
         }
       ];
-      
+
       const mongoResult = await roleRepository.aggregate(pipeline).toArray();
-      console.log('Result from users for role management (Mongo)', mongoResult);
-      
+
       return mongoResult;
-      
+
     } catch (error) {
       console.error('Error executing query', error);
       throw error;
     }
   }
-  
-  
 
-  findByIds(roleRepository:any, ids:string[]) {
+
+
+  findByIds(roleRepository: any, ids: string[]) {
     return roleRepository.find({
       where: { _id: { $in: ids.map((i) => new ObjectId(i)) } },
     });
@@ -126,7 +125,7 @@ export class RoleMongoService {
     });
   }
 
-  deleteMany(roleRepository:any, roleIds:string[]) {
+  deleteMany(roleRepository: any, roleIds: string[]) {
     return roleRepository.deleteMany({
       _id: { $in: roleIds.map(id => new ObjectId(id)) },
     }).then(result => result.deletedCount)

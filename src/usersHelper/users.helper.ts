@@ -18,13 +18,17 @@ import { ErrorMessages, SuccessMessages } from '../utils/messages';
 import { templateCode } from 'src/utils/config';
 import { BulkUpdateUserDto } from '../users/dto/update-user.dto';
 import { CaslAbilityFactory } from 'src/casl/casl-ability.factory/casl-ability.factory';
-import { delCache } from 'memcachelibrarybeta';
+import { delCache } from 'onioncache';
 import { isDateString, isEmail, isMilitaryTime, isURL, validate } from 'class-validator';
 import { RequestUser, UserId } from '../users/dto/request-user.dto';
 import { ProfileFieldsService } from "src/profileFields/profileFields.service";
 import { UsersMongoHelper } from './users.mongo.helper';
 import { UsersPostgresHelper } from './users.postgres.helper';
 import { TenantUsersService } from 'src/tenant/modules/tenant-users/tenant-users.service';
+import { SettingsService } from 'src/settings/settings.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { englishToItalianConversion } from 'src/utils/languages';
 @Injectable()
 export class UsersHelper {
   private userRepository: Repository<User> & MongoRepository<User>;
@@ -36,6 +40,7 @@ export class UsersHelper {
     private caslAbilityFactory: CaslAbilityFactory,
     private readonly profileFieldsService: ProfileFieldsService,
     private readonly usersMongoHelper: UsersMongoHelper,
+    private readonly settingsService: SettingsService,
     private readonly usersPostgresHelper: UsersPostgresHelper,
     private readonly tenantUsersService: TenantUsersService
   ) {
@@ -88,48 +93,44 @@ export class UsersHelper {
       const userKeys = Object.keys(user);
       const userProfileFields = profileFields.filter(key => userKeys.indexOf(key.pFColumName) > -1);
       for (const userProfileField of userProfileFields) {
-        switch(userProfileField.pFType) {
+        switch (userProfileField.pFType) {
           case 'date':
-            // if(!isDate(user[userProfileField.pFColumName])) {
-            //   throw new BadRequestException(`${userProfileField.pFColumName} field should be a date.`)
-            // }
-            // break;
           case 'datetime':
-            if(!isDateString(user[userProfileField.pFColumName])) {
+            if (!isDateString(user[userProfileField.pFColumName])) {
               throw new BadRequestException(`${userProfileField.pFColumName} field should be a date.`)
             }
             break;
           case 'time':
-            if(!isMilitaryTime(user[userProfileField.pFColumName])) {
+            if (!isMilitaryTime(user[userProfileField.pFColumName])) {
               throw new BadRequestException(`${userProfileField.pFColumName} field should be a time.`)
             }
             break;
           default:
         }
-        if(userProfileField?.pFValidation?.type) {
-          switch(userProfileField?.pFValidation?.type) {
+        if (userProfileField?.pFValidation?.type) {
+          switch (userProfileField?.pFValidation?.type) {
             case 'text':
-              if(typeof user[userProfileField.pFColumName] !== 'string') {
+              if (typeof user[userProfileField.pFColumName] !== 'string') {
                 throw new BadRequestException(`${userProfileField.pFColumName} field should be a string.`)
               }
               break;
             case 'number':
-              if(isNaN(user[userProfileField.pFColumName])) {
+              if (isNaN(user[userProfileField.pFColumName])) {
                 throw new BadRequestException(`${userProfileField.pFColumName} field should be a number.`)
               }
               break;
             case 'email':
-              if(!isEmail(user[userProfileField.pFColumName])) {
+              if (!isEmail(user[userProfileField.pFColumName])) {
                 throw new BadRequestException(`${userProfileField.pFColumName} field should be an email.`)
               }
               break;
             case 'url':
-              if(!isURL(user[userProfileField.pFColumName])) {
+              if (!isURL(user[userProfileField.pFColumName])) {
                 throw new BadRequestException(`${userProfileField.pFColumName} field should be an url.`)
               }
               break;
             case 'custom':
-              if(!(new RegExp(userProfileField.pFValidation.regexPattern, 'i').test(user[userProfileField.pFColumName]))) {
+              if (!(new RegExp(userProfileField.pFValidation.regexPattern, 'i').test(user[userProfileField.pFColumName]))) {
                 throw new BadRequestException(`${userProfileField.pFColumName} field should match ${userProfileField.pFValidation.regexPattern}.`)
               }
               break;
@@ -137,7 +138,7 @@ export class UsersHelper {
           }
         }
         const key = create ? user.email : user._id;
-        if(!profileFieldsToSaveObject[key]) {
+        if (!profileFieldsToSaveObject[key]) {
           profileFieldsToSaveObject[key] = {};
         }
         profileFieldsToSaveObject[key][userProfileField.pFColumName] = user[userProfileField.pFColumName];
@@ -151,7 +152,7 @@ export class UsersHelper {
     const profileFieldsToSaveObject = await this.profileFieldValidate(users, true);
     const userRole = reqUser?.role || RoleType.ENDUSER;
     let hasCreatePermission = false;
-
+    let roleName;
     const usersObj = {};
     let submittedRoleIds = [];
 
@@ -174,14 +175,13 @@ export class UsersHelper {
 
     for (const emailsArr of emailChunks) {
       let usersArr = [];
-      if(isMongoDB) {
+      if (isMongoDB) {
         usersArr = await this.usersMongoHelper.findUsersByEmails(this.userRepository, emailsArr);
       } else {
         usersArr = await this.usersPostgresHelper.findUsersByEmails(this.userRepository, emailsArr);
       }
       if (usersArr.length > 0) {
         existingEmails = [...existingEmails, ...usersArr.map((u) => u.email)];
-        // throw new BadRequestException(ErrorMessages.EMAIL_ALREADY_TAKEN.replace('{emailIds}', usersArr.map(u => u.email).join()));
       }
     }
 
@@ -195,7 +195,6 @@ export class UsersHelper {
     const role = await this.roleRepository.findOne({
       where: { roleType: RoleType.ENDUSER },
     });
-    console.log(role, 'role');
     if (role) {
       const roleId = role._id;
       let usersToSave = [];
@@ -207,7 +206,7 @@ export class UsersHelper {
 
       for (const roleChunk of roleChunks) {
         let rolesArr = [];
-        if(isMongoDB) {
+        if (isMongoDB) {
           rolesArr = await this.usersMongoHelper.findRolesByIds(this.roleRepository, roleChunk);
         } else {
           rolesArr = await this.usersPostgresHelper.findRolesByIds(this.roleRepository, roleChunk);
@@ -219,17 +218,17 @@ export class UsersHelper {
 
       for (const userData of users) {
         let { password, roleIds = [], email, firstName, lastName, dateOfBirth,
-          gender, countryCode, phoneNumber, country, address } = userData;
+          gender, countryCode, phoneNumber, country, address, designation, organisation } = userData;
 
         const userRoles = roles.filter(
           (role) => roleIds.indexOf(role._id) > -1,
         );
         roleIds = userRoles.map((role) => role._id);
-
+        roleName = userRoles.map((role) => role.name)[0]
         if (
           !hasCreatePermission &&
           userRoles.filter((role) => role.roleType === RoleType.ADMIN).length >
-            0
+          0
         ) {
           disallowedEmails = [...disallowedEmails, email];
           continue;
@@ -237,10 +236,10 @@ export class UsersHelper {
 
         const userToSave = {
           password, roleIds, email, firstName, lastName, dateOfBirth,
-          gender, countryCode, phoneNumber, country, address, profileFields: {}
+          gender, countryCode, phoneNumber, country, address, profileFields: {}, designation, organisation
         };
 
-        if(profileFieldsToSaveObject[userData.email]) {
+        if (profileFieldsToSaveObject[userData.email]) {
           userToSave.profileFields = profileFieldsToSaveObject[userData.email];
         }
 
@@ -254,11 +253,11 @@ export class UsersHelper {
       }
 
       const newUsers = await this.userRepository.save(usersToSave, { chunk: 1000 });
-      if(newUsers.length > 0) {
+      if (newUsers.length > 0) {
         const newProfileFieldsToSave = [];
         const tenantUsersToSave = [];
-        for(const newUser of newUsers) {
-          if(profileFieldsToSaveObject[newUser.email]) {
+        for (const newUser of newUsers) {
+          if (profileFieldsToSaveObject[newUser.email]) {
             newProfileFieldsToSave.push({ userId: newUser._id, ...profileFieldsToSaveObject[newUser.email] })
           }
           tenantUsersToSave.push({
@@ -272,8 +271,8 @@ export class UsersHelper {
         if (IDENTIFY_TENANT_FROM_PRIMARY_DB) {
           await this.tenantUsersService.saveTenantUsers(tenantUsersToSave);
         }
-        if(newProfileFieldsToSave.length > 0) {
-          if(isMongoDB) {
+        if (newProfileFieldsToSave.length > 0) {
+          if (isMongoDB) {
             await this.usersMongoHelper.insertProfileFields(this.connection, newProfileFieldsToSave);
           } else {
             await this.usersPostgresHelper.insertProfileFields(this.connection, newProfileFieldsToSave);
@@ -286,15 +285,25 @@ export class UsersHelper {
       const emailFailedUsers = [];
 
       for (const newUser of newUsers) {
-        const { _id, firstName, lastName, email } = newUser;
+        const { _id, firstName, lastName, email, password } = newUser;
+        const tenantSettings = await this.settingsService.findOneSettings('basic');
+        const companyName = tenantSettings.settings.companyName;
+
         createdUsers.push({ _id, firstName, lastName, email });
         const data = {
-          Template: userRegistrationTemplate,
-          recipientEmail: email,
-          TemplateData: {
-            receiverName: firstName + ' ' + lastName,
-            url: `${process.env.CLIENT_SIDE_URL}/sign-in`,
+          templateCode: templateCode.USER_REG_BY_SUPERADMIN,
+          to: [{ email: email, name: firstName + " " + lastName }],
+          data: {
+            userName: firstName,
+            subject: `${englishToItalianConversion('accountCreation', companyName)}`,
+            success_gif: process.env.SUCCESS_IMAGE,
+            roleName: roleName,
+            email: email,
+            password: users[0].password,
+            ciLink: process.env.SUPERADMIN_FRONTEND_URL,
+            appName: companyName
           },
+          multiThread: false
         };
 
         const response = await this.emailService.sendEmail(data);
@@ -398,7 +407,7 @@ export class UsersHelper {
         let roles = [];
 
         if (roleIds.length > 0) {
-          if(isMongoDB) {
+          if (isMongoDB) {
             roles = await this.usersMongoHelper.findRolesByIds(queryRunner.manager.getRepository(Role), roleIds);
           } else {
             roles = await this.usersPostgresHelper.findRolesByIds(queryRunner.manager.getRepository(Role), roleIds);
@@ -412,14 +421,14 @@ export class UsersHelper {
           (_id !== userId ||
             (_id === userId &&
               roles.filter((role) => role.roleType === RoleType.ADMIN).length >
-                0))
+              0))
         ) {
           disallowedIds = [...disallowedIds, _id];
           continue;
         }
 
         let userData;
-        if(isMongoDB) {
+        if (isMongoDB) {
           userData = await this.usersMongoHelper.findUserById(queryRunner.manager.getRepository(User), _id)
         } else {
           userData = await this.usersPostgresHelper.findUserById(queryRunner.manager.getRepository(User), _id)
@@ -468,9 +477,9 @@ export class UsersHelper {
           if (address) {
             userData.address = address;
           }
-          if(profileFieldsToSaveObject[_id]) { 
+          if (profileFieldsToSaveObject[_id]) {
             const existingFields = userData.profileFields || {};
-            userData.profileFields = { ...existingFields, ...profileFieldsToSaveObject[_id] }; 
+            userData.profileFields = { ...existingFields, ...profileFieldsToSaveObject[_id] };
           }
 
           const tenantUser: any = { userId: _id };
@@ -486,8 +495,8 @@ export class UsersHelper {
           }
 
           await queryRunner.manager.getRepository(User).save(userData);
-          if(profileFieldsToSaveObject[_id]) {
-            if(isMongoDB) {
+          if (profileFieldsToSaveObject[_id]) {
+            if (isMongoDB) {
               await this.usersMongoHelper.updateProfileField(queryRunner, _id, profileFieldsToSaveObject);
             } else {
               await this.usersPostgresHelper.updateProfileField(queryRunner, _id, profileFieldsToSaveObject);
@@ -515,7 +524,7 @@ export class UsersHelper {
     if (updatedIds.length > 0) {
       try {
         await Promise.all(updatedIds.map((id) => delCache(id)));
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const message = [];

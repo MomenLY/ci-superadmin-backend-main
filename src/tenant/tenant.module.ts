@@ -1,5 +1,4 @@
 import {
-  // BadRequestException,
   Global,
   MiddlewareConsumer,
   Module,
@@ -12,11 +11,9 @@ import { Tenant } from './entities/tenant.entity';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { TenantUsersModule } from './modules/tenant-users/tenant-users.module';
-// import { UserSubscriber } from 'src/entity-subscribers/user.subscriber';
-// import { CreateDatabaseConnection, findTenant } from 'src/utils/db-utls';
-// import { GlobalService } from 'src/utils/global.service';
-// import { initializeCache } from 'memcachelibrarybeta';
-// import { ErrorMessages } from 'src/utils/messages';
+import { JwtModule } from '@nestjs/jwt';
+import { TenantController } from './tenant.controller';
+import { TenantService } from './tenant.service';
 
 export const TENANT_CONNECTION = 'TENANT_CONNECTION';
 
@@ -58,82 +55,43 @@ const skipPaths = ['/auth/login'];
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([Tenant]), TenantUsersModule],
+  imports: [
+    TypeOrmModule.forFeature([Tenant]),
+    TenantUsersModule,
+    JwtModule.registerAsync({
+      imports: [],
+      useFactory: async (configService: ConfigService) => ({
+        global: true,
+        secret: configService.get('JWT_SECRET'),
+        signOptions: {
+        },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
   providers: [
     {
       provide: TENANT_CONNECTION,
       inject: [REQUEST, DataSource],
       scope: Scope.REQUEST,
       useFactory: async (request, mainDataSource) => {
-        // const xTenantId = request.headers['x-tenant-id'] || '';
-        // const requestPath = request.path;
-        // if (skipPaths.includes(requestPath)) return mainDataSource;
-        // else if (xTenantId === '') return mainDataSource;
-        // else {
-        //   const tenant: Tenant = await findTenant(mainDataSource, xTenantId);
-        //   const _connection = ConnectedDataSources[tenant.name];
-        //   if (_connection) return _connection.source;
-        //   else return mainDataSource;
-        // }
         return mainDataSource;
       },
     },
-  ],
-  exports: [TENANT_CONNECTION, TenantUsersModule],
+    TenantService],
+  exports: [TENANT_CONNECTION, TenantUsersModule, TenantService],
+  controllers: [TenantController],
 })
 export class TenantsModule {
   constructor(
     private readonly mainDataSource: DataSource,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply(async (request, response, next) => {
-        // const xTenantId = request.headers['x-tenant-id'] || '';
-        // const tenant: Tenant = await findTenant(this.mainDataSource, xTenantId);
-        // if (!tenant) {
-        //   throw new BadRequestException(ErrorMessages.TENANT_NOT_FOUND);
-        // }
-        // try {
-        //   GlobalService.accountId = tenant._id;
-        //   GlobalService.emailSubscription = tenant.emailSubscription;
-        //   initializeCache(tenant._id);
-        //   if (
-        //     ConnectedDataSources[tenant.name] !== undefined &&
-        //     ConnectedDataSources[tenant.name].status
-        //   ) {
-        //     ConnectedDataSources[tenant.name].source;
-        //     ConnectedDataSources[tenant.name].restart();
-        //     next();
-        //   } else {
-        //     const { dbHost, dbPort, dbUserName, dbPassword } = tenant;
-        //     const options = {
-        //       name: tenant.name,
-        //       database: tenant.name,
-        //       logging: true,
-        //       host: dbHost,
-        //       port: +dbPort,
-        //       username: dbUserName,
-        //       password: dbPassword,
-        //       subscribers: [UserSubscriber],
-        //     };
-        //     const dataSource: DataSource =
-        //       await CreateDatabaseConnection(options);
-
-        //     if (ConnectedDataSources[tenant.name])
-        //       delete ConnectedDataSources[tenant.name];
-
-        //     ConnectedDataSources[tenant.name] = new ConnectedDataSource(
-        //       dataSource,
-        //     );
-            next();
-          // }
-        // } catch (e) {
-        //   throw new BadRequestException(
-        //     ErrorMessages.DATABASE_CONNECTION_ERROR,
-        //   );
-        // }
+        next();
       })
       .exclude(...skipPaths)
       .forRoutes('*');

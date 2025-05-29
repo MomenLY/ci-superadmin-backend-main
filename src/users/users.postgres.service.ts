@@ -9,8 +9,9 @@ export class UsersPostgresService {
     const queryFields = [
       'u._id', 'u."firstName"', 'u."lastName"', 'u.email', 'u."roleIds"',
       'u."dateOfBirth"', 'u."gender"', 'u."phoneNumber"', 'u."country"',
-      'u."address"', 'u."countryCode"', 'u."profileFields"'
+      'u."address"', 'u."countryCode"', 'r."name" as role', 'u."profileFields"'
     ];
+    let joinRoleCondition = `LEFT JOIN LATERAL unnest(string_to_array(u."roleIds", ',')) AS role_id ON true LEFT JOIN role r ON role_id::UUID = r._id`;
     let joinCond = '';
     const searchableFields = [];
     const hasTable = await queryRunner.hasTable('profile');
@@ -24,18 +25,17 @@ export class UsersPostgresService {
       joinCond = 'LEFT JOIN profile p ON u._id = p."userId"'
     }
 
-    let whereCond = '';
+    let whereCond = `WHERE u."roleIds" !='` + process.env.SUPER_ADMIN_ROLE_ID + `'`;
     let queryParamArray: any = [limit, (page - 1) * limit];
     let countParamArray = [];
     if (search && search.trim()) {
-      whereCond = `WHERE u."firstName" ILIKE $1 OR u."lastName" ILIKE $1 OR u.email ILIKE $1 ${searchableFields.join(' ')}`;
+      whereCond += `AND (u."firstName" ILIKE $1 OR u."lastName" ILIKE $1 OR u.email ILIKE $1 ${searchableFields.join(' ')})`;
       queryParamArray = [`%${search.replace(/\+/, '\\+')}%`, ...queryParamArray];
       countParamArray = [`%${search.replace(/\+/, '\\+')}%`];
     }
     let orderByCond = '';
     if (sortBy) {
       const order = orderBy ? orderBy.toUpperCase() : 'ASC';
-      console.log(order, 'orderrrrr');
       if (order === 'ASC' || order === 'DESC') {
         orderByCond = `ORDER BY u."${sortBy}" ${order}`
       }
@@ -46,6 +46,7 @@ export class UsersPostgresService {
             ${queryFields.join()}
           FROM 
             "user" u
+          ${joinRoleCondition}
           ${joinCond} 
           ${whereCond} 
           ${orderByCond} 

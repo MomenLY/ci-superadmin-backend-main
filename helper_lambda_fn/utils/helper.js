@@ -4,7 +4,7 @@ import { MongoClient } from 'mongodb';
 
 export const pgProcessData = async (dbConfig, langParams) => {
   let pool = null;
-	try {
+  try {
     const DBCONFIG = dbConfig;
 
     pool = new pg.Pool({
@@ -18,22 +18,19 @@ export const pgProcessData = async (dbConfig, langParams) => {
     const { language, module, accountId } = langParams;
 
     const cronRes = await pool.query('SELECT * FROM language WHERE "LLanguage" = $1 AND "LModule" = $2 AND "LAccountId" = $3', [language, module, accountId]);
-    
+
     const dataToUpload = {};
-    for(const row of cronRes.rows) {
+    for (const row of cronRes.rows) {
       dataToUpload[row.LKey] = row.LDefinition;
     }
     const resp = await putObject(`locales/${module}/${language}.json`, JSON.stringify(dataToUpload), 'application/json');
-    console.log(resp)
-    
-	} catch (e) {
-		console.log(e);
-	}
+  } catch (e) {
+    console.log(e);
+  }
 
   try {
-    if(pool) {
+    if (pool) {
       await pool.end();
-      console.log('pool end 2');
     }
   } catch (error) {
     console.log(error);
@@ -44,7 +41,7 @@ export const pgProcessData = async (dbConfig, langParams) => {
 
 export const mongoProcessData = async (dbConfig, langParams) => {
   const client = new MongoClient(dbConfig.url);
-	try {
+  try {
     const database = client.db(dbConfig.database);
     const languageCol = database.collection('language');
     const { language, module, accountId } = langParams;
@@ -55,13 +52,12 @@ export const mongoProcessData = async (dbConfig, langParams) => {
     for await (const doc of cursor) {
       dataToUpload[doc.LKey] = doc.LDefinition;
     }
-    
+
     const resp = await putObject(`locales/${module}/${language}.json`, JSON.stringify(dataToUpload), 'application/json');
-    console.log(resp)
-    
-	} catch (e) {
-		console.log(e);
-	}
+
+  } catch (e) {
+    console.log(e);
+  }
 
   try {
     await client.close();

@@ -8,6 +8,8 @@ import { putObject } from 'src/utils/s3Helper';
 import { invokeFunction } from 'src/utils/lambdaHelper';
 import { FindLanguageDto } from './dto/find-language.dto';
 import { determineDatabase } from 'src/utils/helper';
+import { getCache } from 'onioncache';
+import { GlobalService } from 'src/utils/global.service';
 
 const AWS_HELPER_FN = process.env.AWS_HELPER_FN;
 const NODE_ENV = process.env.NODE_ENV;
@@ -17,21 +19,21 @@ export class LanguagesService {
   constructor(
     @InjectRepository(Language) private langRepository: Repository<Language>,
     @InjectRepository(Language) private mongoLangRepository: MongoRepository<Language>,
-    private dataSource: DataSource
+    private dataSource: DataSource, private readonly globalService: GlobalService,
+
   ) { }
 
   async uploadToS3(language: string, module: string) {
-    if(NODE_ENV === 'production') {
+    if (NODE_ENV === 'production') {
       const invokeRes = await invokeFunction({
         action: 'lang_upload_s3',
         dbConfig: determineDatabase(),
         langParams: { language, module, accountId: "0" }
       }, AWS_HELPER_FN);
-      console.log(invokeRes);
     } else {
       const langData = await this.langRepository.find({ where: { LLanguage: language, LModule: module, LAccountId: "0" } });
       const dataToUpload = {};
-      for(const lang of langData) {
+      for (const lang of langData) {
         dataToUpload[lang.LKey] = lang.LDefinition;
       }
       return putObject(`locales/${module}/${language}.json`, JSON.stringify(dataToUpload), 'application/json');
@@ -65,12 +67,12 @@ export class LanguagesService {
     }
     let existingKeys = [];
     let createdCount = langData.length;
-    if(existingData.length > 0) {
+    if (existingData.length > 0) {
       existingKeys = existingData.map(d => d.LKey);
       createdCount = langData.length - existingKeys.length;
       langData = langData.filter(lang => existingKeys.indexOf(lang.LKey) === -1);
     }
-    if(langData.length > 0) {
+    if (langData.length > 0) {
       const queryResult = await this.langRepository.insert(langData);
       await this.uploadToS3(language, module);
     }
@@ -84,6 +86,22 @@ export class LanguagesService {
     } else {
       return this.langRepository.find({ where: { LKey: In(keys), LLanguage: language, LAccountId: "0" } })
     }
+  }
+
+  findByLanguage(lang: string) {
+    const getLangCb = () =>
+      this.langRepository
+        .find({
+          where: { LLanguage: lang, LAccountId: this.globalService.accountId },
+        })
+        .then((res) => {
+          const keyVal = {};
+          for (const d of res) {
+            keyVal[d.LKey] = d.LDefinition;
+          }
+          return keyVal;
+        });
+    return getCache(`lang_${lang}`, getLangCb);
   }
 
   async findAll(lang: string, page: number, limit: number, search: string | undefined) {
@@ -159,15 +177,14 @@ export class LanguagesService {
     try {
       for (const key of keys) {
         const langData = await queryRunner.manager.getRepository(Language).findOne({ where: { LKey: key, LLanguage: language, LAccountId: "0" } });
-        console.log(langData)
-        if(langData) {
+        if (langData) {
           modules.push(langData.LModule);
           langData.LDefinition = data[key];
           await queryRunner.manager.getRepository(Language).save(langData);
           updateCount++;
         }
       }
-      
+
       await queryRunner.commitTransaction();
     } catch (e) {
       await queryRunner.rollbackTransaction();
@@ -177,12 +194,11 @@ export class LanguagesService {
     }
 
     modules = [...new Set(modules)]
-    console.log(modules)
 
-    for(const module of modules) {
+    for (const module of modules) {
       await this.uploadToS3(language, module);
     }
-    
+
     return ({ updateCount });
   }
 

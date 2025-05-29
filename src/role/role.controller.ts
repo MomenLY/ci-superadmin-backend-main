@@ -17,18 +17,13 @@ import { IPaginationOptions, Pagination } from 'nestjs-typeorm-paginate';
 
 @Controller('role')
 export class RoleController {
-  constructor(private readonly roleService: RoleService) {}
+  constructor(private readonly roleService: RoleService) { }
 
   @Public()
   @Post()
   create(@Body() role: CreateRoleDto) {
     return this.roleService.create(role);
   }
-
-  // @Get()
-  // findAll() {
-  //   return this.roleService.findAll();
-  // }
 
   @Get()
   async findAll(
@@ -48,17 +43,13 @@ export class RoleController {
 
     let roles: Pagination<RoleDto>;
 
-    // if (search || type) {
-      roles = await this.roleService.searchAndPaginate(
-        options,
-        search,
-        type,
-        sortBy,
-        orderBy,
-      );
-    // } else {
-    //   roles = await this.roleService.paginate(options, sortBy, orderBy);
-    // }
+    roles = await this.roleService.searchAndPaginate(
+      options,
+      search,
+      type,
+      sortBy,
+      orderBy,
+    );
 
     return roles;
   }
@@ -70,17 +61,16 @@ export class RoleController {
 
   @Get('users')
   async findUsers(
-  @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
-  @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit = 10,
-  @Query('search') keyword?: string,
-  @Query('type') type?: string,
-  @Query('sortBy') sortBy?: string,
-  @Query('orderBy') orderBy?: 'asc' | 'desc') : Promise<Pagination<RoleDto>> {
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit = 10,
+    @Query('search') keyword?: string,
+    @Query('type') type?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('orderBy') orderBy?: 'asc' | 'desc'): Promise<Pagination<RoleDto>> {
     const options: IPaginationOptions = {
       page,
       limit,
     };
-    console.log(keyword, "pppppppppppppppppppppppppp")
 
     let roles: Pagination<RoleDto>;
     roles = await this.roleService.findUsersByRole(options,
@@ -88,10 +78,14 @@ export class RoleController {
       type,
       sortBy,
       orderBy);
-        
+
     return roles;
   }
 
+  @Get('/modules')
+  async getModules(@Query('roleType') roleType: string) {
+    return await this.roleService.getRoleModules(roleType);
+  }
   @Get(':id')
   findOne(@Param('id') id: any) {
     return this.roleService.findOne(id);

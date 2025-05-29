@@ -13,7 +13,7 @@ import {
   ResetPasswordDTO,
   UserDto,
 } from './dto/create-user.dto';
-import { ILike, MongoRepository, Not, Repository } from 'typeorm';
+import { ILike, In, MongoRepository, Not, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import * as bcrypt from '@node-rs/bcrypt';
 import {
@@ -27,14 +27,13 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   IPaginationOptions,
   Pagination,
-  // paginate,
 } from 'nestjs-typeorm-paginate';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Role, RoleType } from 'src/role/entities/role.entity';
 import { TENANT_CONNECTION } from 'src/tenant/tenant.module';
 import { TenantUser } from 'src/tenant/modules/tenant-users/entities/tenant-user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { delCache, getCache } from 'memcachelibrarybeta';
+import { delCache, getCache } from 'onioncache';
 import { EmailLibrary } from '../utils/emailLibrary';
 import { templateCode } from 'src/utils/config';
 import { PasswordTokens } from 'src/password-token/entities/password-token.entity';
@@ -43,6 +42,9 @@ import { ProfileFieldsService } from 'src/profileFields/profileFields.service';
 import { ColumnType } from 'src/profileFields/entities/profileFields.entity';
 import { UsersMongoService } from './users.mongo.service';
 import { UsersPostgresService } from './users.postgres.service';
+import { GlobalService } from 'src/utils/global.service';
+import { SettingsService } from 'src/settings/settings.service';
+import { englishToItalianConversion } from 'src/utils/languages';
 
 @Injectable()
 export class UsersService {
@@ -60,7 +62,9 @@ export class UsersService {
     private emailService: EmailLibrary,
     private profileFieldsService: ProfileFieldsService,
     private usersMongoService: UsersMongoService,
-    private usersPostgresService: UsersPostgresService
+    private usersPostgresService: UsersPostgresService,
+    private globalService: GlobalService,
+    private settingsService: SettingsService
   ) {
     this.tokenLife = 24; //in hours
     this.userRepository = this.connection.getRepository(User);
@@ -90,31 +94,57 @@ export class UsersService {
     }
   }
 
+  async getSession(request: any, roleId?: string) {
+
+    const user = await this.userRepository.findOne({ where: { _id: request.user._id } });
+    let roleDetails = null;
+
+    if (user.roleIds.length === 0) {
+      throw new Error("No roles have been assigned to this user")
+    } else {
+
+      if (roleId) {
+        roleDetails = await this.roleRepository.findOne({ where: { _id: roleId } });
+      } else {
+        if (user.roleIds.length > 1) {
+          roleDetails = await this.roleRepository.find({
+            where: {
+              _id: In(user.roleIds)
+            }
+          });
+        } else {
+          roleDetails = await this.roleRepository.findOne({ where: { _id: user.roleIds[0] } });
+        }
+      }
+
+      return {
+        users: {
+          uuid: user._id,
+          userAcl: user.acl,
+          ...(
+            roleId || user.roleIds.length === 1 ? {
+              role: roleDetails.roleType,
+              roleId: roleDetails._id,
+              roleAcl: roleDetails.acl,
+              isDefault: roleDetails.areIsDefault
+            } : {
+              roles: roleDetails
+            }
+          ),
+          featureRestrictions: this.globalService.featuresRestrictions,
+          data: {
+            displayName: user.firstName + ' ' + user.lastName,
+            email: user.email,
+            userImage: user.userImage
+          },
+        },
+      };
+    }
+  }
+
   async findOneByEmail(email: string): Promise<User> {
     return this.userRepository.findOne({ where: { email: email } });
   }
-
-  // findByKeyword(keyword: string) {
-  //   if (isMongoDB) {
-  //     return this.userRepository.find({
-  //       where: {
-  //         $or: [
-  //           { firstName: { $regex: keyword, $options: 'i' } },
-  //           { lastName: { $regex: keyword, $options: 'i' } },
-  //         ],
-  //       },
-  //       select: ['_id', 'firstName', 'lastName', 'email'],
-  //     });
-  //   } else {
-  //     return this.userRepository.find({
-  //       where: [
-  //         { firstName: ILike(`%${keyword}%`) },
-  //         { lastName: ILike(`%${keyword}%`) },
-  //       ],
-  //       select: ['_id', 'firstName', 'lastName', 'email'],
-  //     });
-  //   }
-  // }
 
   async Validate(_id: any): Promise<any> {
     let user;
@@ -124,7 +154,7 @@ export class UsersService {
       user = await this.usersPostgresService.findOne(this.userRepository, _id);
     }
     if (user) {
-      const {} = user;
+      const { } = user;
       return {
         user: {
           uuid: user._id,
@@ -150,109 +180,6 @@ export class UsersService {
     }
   }
 
-  // async create(createUserDto: CreateUserDto) {
-  //   const { email, password, firstName, lastName } = createUserDto;
-  //   const serviceMessageObject = { message: '' };
-  //   if (IDENTIFY_TENANT_FROM_PRIMARY_DB) {
-  //     const user = await this.tenantUserRepository.findOne({
-  //       where: { email },
-  //     });
-  //     if (user) {
-  //       throw new NotFoundException(ErrorMessages.EMAIL_ALREADY_EXISTS);
-  //     }
-  //   }
-  //   const user = await this.userRepository.findOne({ where: { email } });
-  //   if (user) {
-  //     throw new NotFoundException(ErrorMessages.EMAIL_ALREADY_EXISTS);
-  //   }
-
-  //   const role = await this.roleRepository.findOne({
-  //     where: { roleType: RoleType.ENDUSER },
-  //   });
-  //   if (role) {
-  //     const roleId = role._id;
-  //     const saltRounds = 10;
-  //     const hash = await bcrypt.hash(password, saltRounds);
-  //     createUserDto.password = hash;
-  //     if (!createUserDto.roleIds.includes(roleId)) {
-  //       createUserDto.roleIds.push(roleId);
-  //     }
-  //     const newUser = await this.userRepository.save(createUserDto);
-  //     if (IDENTIFY_TENANT_FROM_PRIMARY_DB) {
-  //       await this.tenantUserRepository.save({
-  //         name: firstName + ' ' + lastName,
-  //         email: email,
-  //         phone: '',
-  //         tenantIdentifier: this.connection.name,
-  //         userId: newUser._id,
-  //       });
-  //     }
-  //     if (newUser) {
-  //       const userRegistrationTemplate = templateCode.USERACCOUNTCREATION;
-  //       const data = {
-  //         Template: userRegistrationTemplate,
-  //         recipientEmail: newUser.email,
-  //         TemplateData: {
-  //           receiverName: newUser.firstName + ' ' + newUser.lastName,
-  //           url: `${process.env.CLIENT_SIDE_URL}/sign-in`,
-  //         },
-  //       };
-  //       serviceMessageObject['message'] =
-  //         SuccessMessages.USER_ACCOUNT_CREATION_SUCCESS;
-  //       const response = await this.emailService.sendEmail(data);
-  //       if (response['error'] === true) {
-  //         serviceMessageObject['message'] =
-  //           ErrorMessages.USER_ACCOUNT_CREATED_EMAIL_NOT_SENT;
-  //       }
-  //     } else {
-  //       throw new BadRequestException(ErrorMessages.EMAIL_SENDING_ERROR);
-  //     }
-
-  //     return {
-  //       ...newUser,
-  //       password: undefined,
-  //       message: serviceMessageObject['message'],
-  //     };
-  //   } else {
-  //     throw new NotFoundException(ErrorMessages.ENDUSER_NOT_FOUND);
-  //   }
-  // }
-
-  // async createUserBulk(createUserDto: CreateBulkDto) {
-  //   const { users } = createUserDto;
-  //   const savedUser = [];
-  //   for (const userData of users) {
-  //     const { email, password } = userData;
-  //     const user = await this.userRepository.findOne({ where: { email } });
-  //     if (user) {
-  //       throw new BadRequestException(ErrorMessages.USER_ALREADY_EXIXTS);
-  //     }
-
-  //     const saltRounds = 10;
-  //     const hash = await bcrypt.hash(password, saltRounds);
-  //     userData.password = hash;
-
-  //     const newUser = await this.userRepository.save(userData);
-  //     savedUser.push({ ...newUser, password: undefined });
-  //   }
-  //   return savedUser;
-  // }
-
-  // findAll() {
-  //   console.log('from sreeja');
-  //   return this.userRepository.find({
-  //     select: [
-  //       'firstName',
-  //       'lastName',
-  //       'email',
-  //       'gender',
-  //       'phoneNumber',
-  //       'address',
-  //       'dateOfBirth',
-  //       'enforcePasswordReset',
-  //     ],
-  //   });
-  // }
 
   async adminResetPassword(_id: string) {
     const DEFAULT_PASSWORD = 'Welcome123';
@@ -293,174 +220,6 @@ export class UsersService {
     }
   }
 
-  // async update(
-  //   id: string,
-  //   updateUserDto: UpdateUserDto,
-  //   resetPassword: boolean,
-  // ) {
-  //   const DEFAULT_PASSWORD = 'Welcome123';
-  //   try {
-  //     if (!isObjectIdOrUUID(id)) {
-  //       throw new BadRequestException(ErrorMessages.INVALID_UUID_FORMAT);
-  //     }
-  //     const user = await this.userRepository.findOne({
-  //       where: { _id: id },
-  //       select: [
-  //         '_id',
-  //         'firstName',
-  //         'lastName',
-  //         'email',
-  //         'dateOfBirth',
-  //         'gender',
-  //         'countryCode',
-  //         'phoneNumber',
-  //         'password',
-  //         'country',
-  //         'address',
-  //         'acl',
-  //         'roleIds',
-  //         'createdAt',
-  //         'updatedAt',
-  //       ],
-  //     });
-
-  //     if (!user) {
-  //       throw new NotFoundException(
-  //         ErrorMessages.USER_NOT_FOUND + `with ID ${id}`,
-  //       );
-  //     }
-
-  //     if (resetPassword === true) {
-  //       console.log('yes resetpassword is true');
-
-  //       const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
-  //       user.password = hashedPassword;
-  //       const result = await this.userRepository.save(user);
-
-  //       return result;
-  //     }
-
-  //     if (updateUserDto.email && updateUserDto.email !== user.email) {
-  //       const isEmailTaken = await this.userRepository.findOne({
-  //         where: { _id: Not(id), email: updateUserDto.email },
-  //       });
-  //       if (isEmailTaken) {
-  //         throw new BadRequestException(ErrorMessages.EMAIL_ALREADY_EXISTS);
-  //       }
-  //     }
-
-  //     if (IDENTIFY_TENANT_FROM_PRIMARY_DB) {
-  //       const { email } = user;
-  //       const tenantUser = await this.tenantUserRepository.findOne({
-  //         where: { email },
-  //       });
-  //       if (tenantUser) {
-  //         const isEmailTaken = await this.tenantUserRepository.findOne({
-  //           where: { _id: Not(tenantUser._id), email: updateUserDto.email },
-  //         });
-  //         if (isEmailTaken) {
-  //           throw new BadRequestException(ErrorMessages.EMAIL_ALREADY_EXISTS);
-  //         }
-  //       }
-  //     }
-  //     Object.assign(user, updateUserDto);
-  //     try {
-  //       await delCache(id);
-  //     } catch (err) {}
-  //     const result = await this.userRepository.save(user);
-  //     return result;
-  //   } catch (error) {
-  //     if (error instanceof HttpException) {
-  //       throw error;
-  //     } else {
-  //       throw new InternalServerErrorException(error.message);
-  //     }
-  //   }
-  // }
-
-  // async delete(id: string) {
-  //   if (!isObjectIdOrUUID(id)) {
-  //     throw new BadRequestException(ErrorMessages.INVALID_UUID_FORMAT);
-  //   }
-  //   const user = await this.userRepository.findOneBy({ _id: id });
-  //   if (!user) {
-  //     throw new BadRequestException(ErrorMessages.USER_NOT_FOUND);
-  //   }
-  //   await this.userRepository.remove(user);
-  //   return SuccessMessages.DELETION_SUCCESS;
-  // }
-
-  // async paginate(options: IPaginationOptions): Promise<Pagination<UserDto>> {
-  //   const { items, ...paginationInfo } = await paginate<User>(
-  //     this.userRepository,
-  //     options,
-  //   );
-  //   const users = items.map((user) => new UserDto(user));
-  //   return { items: users, ...paginationInfo };
-  // }
-
-  // async paginate(
-  //   options: IPaginationOptions,
-  //   sortBy?: string,
-  //   orderBy?: 'asc' | 'desc',
-  // ): Promise<Pagination<UserDto>> {
-  //   const page = Number(options.page);
-  //   const limit = Number(options.limit);
-
-  //   if (this.userRepository instanceof MongoRepository) {
-  //     const sortOptions: { [key: string]: 1 | -1 } = {};
-
-  //     if (sortBy) {
-  //       sortOptions[sortBy] = orderBy === 'asc' ? 1 : -1;
-  //     }
-
-  //     const [items, totalItems] = await this.userRepository.findAndCount({
-  //       skip: (page - 1) * limit,
-  //       take: limit,
-  //       // sort: sortOptions,
-  //     });
-
-  //     const users = items.map((user) => new UserDto(user));
-
-  //     return {
-  //       items: users,
-  //       meta: {
-  //         totalItems,
-  //         itemCount: items.length,
-  //         itemsPerPage: limit,
-  //         totalPages: Math.ceil(totalItems / limit),
-  //         currentPage: page,
-  //       },
-  //     };
-  //   } else {
-  //     const userRepository = this.userRepository as Repository<User>;
-  //     const queryBuilder = userRepository
-  //       .createQueryBuilder('User')
-  //       .skip((page - 1) * limit)
-  //       .take(limit);
-
-  //     if (sortBy) {
-  //       const order = orderBy ? orderBy.toUpperCase() : 'ASC';
-  //       if (order === 'ASC' || order === 'DESC') {
-  //         queryBuilder.orderBy(`User.${sortBy}`, order);
-  //       }
-  //     }
-
-  //     const [items, totalItems] = await queryBuilder.getManyAndCount();
-  //     const users = items.map((user) => new UserDto(user));
-
-  //     return {
-  //       items: users,
-  //       meta: {
-  //         totalItems,
-  //         itemCount: items.length,
-  //         itemsPerPage: limit,
-  //         totalPages: Math.ceil(totalItems / limit),
-  //         currentPage: page,
-  //       },
-  //     };
-  //   }
-  // }
 
   async searchAndPaginate(
     options: IPaginationOptions,
@@ -491,20 +250,23 @@ export class UsersService {
         passwordReset.userId = user._id;
         passwordReset.token = token;
         await passwordReset.save();
-
-        const resetPasswordURL = `${process.env.CLIENT_SIDE_URL}/reset-password/${token}`;
+        const tenantSettings = await this.settingsService.findOneSettings('basic');
+        const companyName = tenantSettings.settings.companyName;
+        const resetPasswordURL = `${process.env.SUPERADMIN_FRONTEND_URL}/reset-password/${token}`;
         const receiverName = user.firstName + ' ' + user.lastName;
         const ResetPasswordTemplate = templateCode.RESETPASSWORDLINK;
         const data = {
-          Template: ResetPasswordTemplate,
-          recipientEmail: user.email,
-          TemplateData: {
-            receiverName: receiverName,
+          templateCode: ResetPasswordTemplate,
+          to: [{ email: user.email, name: receiverName }],
+          data: {
+            userName: receiverName,
+            logo: process.env.DEFAULT_DB_LOGO_PATH,
+            subject: `${englishToItalianConversion('forgotPasswordEmailSubject', companyName)}`,
             url: resetPasswordURL,
+            companyName: companyName
           },
         };
         const response = await this.emailService.sendEmail(data);
-        console.log(response);
         if (response) {
           return SuccessMessages.EMAIL_SENT_SUCCESSFULLY;
         } else {
@@ -522,8 +284,6 @@ export class UsersService {
     const passwordToken = await this.passwordTokensRepository.findOne({
       where: { token },
     });
-
-    console.log(passwordToken, 'passwordToken');
 
     if (!passwordToken) {
       throw new BadRequestException(ErrorMessages.INVALID_TOKEN);
@@ -564,8 +324,7 @@ export class UsersService {
       }
     } else {
       if (req) {
-        userId = req;
-        console.log(userId, 'userdiddddd');
+        userId = resetPassword._id;
       } else {
         throw new BadRequestException('User not authenticated');
       }
@@ -573,8 +332,6 @@ export class UsersService {
     }
 
     const user = await this.userRepository.findOne({ where: { _id: userId } });
-    console.log(user, 'userrrrr');
-
     if (user) {
       const hashedPassword = await bcrypt.hash(resetPassword.password, 10);
       user.password = hashedPassword;
@@ -587,17 +344,31 @@ export class UsersService {
           { isConsumed: true },
         );
       }
+      const tenantSettings = await this.settingsService.findOneSettings('basic');
+      const companyName = tenantSettings.settings.companyName;
 
-      return SuccessMessages.PASSWORD_RESET_SUCCESS;
+      const resetPasswordData = {
+        templateCode: templateCode.ENDUSER_PASSWORD_RESET_TEMPLATE,
+        to: [{ email: user.email.toLowerCase(), name: user.firstName + " " + user.lastName }],
+        data: {
+          userName: user.firstName + ' ' + user.lastName,
+          subject: `${englishToItalianConversion('passwordResetSuccessful', companyName)}`,
+          companyName: companyName
+        },
+        mutithread: false
+      }
+      const emailResponse = await this.emailService.sendEmail(resetPasswordData);
+      if (emailResponse) {
+        return SuccessMessages.EMAIL_SENT_SUCCESSFULLY;
+      } else {
+        throw new BadRequestException(ErrorMessages.EMAIL_SENDING_ERROR);
+      }
+
+      // return SuccessMessages.PASSWORD_RESET_SUCCESS;
     } else {
       throw new BadRequestException(
         ErrorMessages.USER_DETAILS_NOT_FOUND_RECHECK_TOKEN,
       );
     }
   }
-
-  // async bulkDelete(ids: string[]) {
-  //   return this.userRepository.delete(ids);
-  // }
-
 }

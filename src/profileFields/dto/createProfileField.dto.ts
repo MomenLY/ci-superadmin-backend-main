@@ -14,7 +14,7 @@ import {
 import { ValidateObject } from 'src/utils/helper';
 import { FileUploadParams } from '../entities/profileFields.entity';
 
-export const fieldTypes = ['input', 'select', 'file', 'date', 'datetime', 'time'];
+export const fieldTypes = ['input', 'select', 'file', 'date', 'datetime', 'time', 'phoneNumber'];
 export const validationTypes = ['text', 'number', 'email', 'url', 'json', 'custom'];
 
 class ValidationDto {
@@ -57,12 +57,10 @@ export class CreateProfileFieldDto {
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
   pFPlaceholder: string;
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
   pFHelperText: string;
 
   @IsNumber()
@@ -94,4 +92,14 @@ export class CreateProfileFieldDto {
   @ValidateNested()
   @Type(() => ValidationDto)
   pFValidation: ValidationDto;
+
+  @IsString()
+  @IsOptional()
+  pFFormType: string;
+
+  @IsOptional()
+  @IsNumber()
+  @IsIn([0, 1], { message: 'pFRequired must be either 0 or 1' })
+  pFDefault: number
+
 }

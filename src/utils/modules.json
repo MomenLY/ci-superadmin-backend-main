@@ -76,5 +76,33 @@
                 "label": "Export Groups"
             }
         }
+    },
+    {
+        "label": "Roles",
+        "connectedFeature": "FeatureKey",
+        "moduleKey": "role",
+        "accessRules": {
+            "viewGroups": {
+                "label": "View Roles",
+                "connectedFeature": "FeatureKey",
+                "defaultPermission": true
+            },
+            "editGroup": {
+                "label": "Edit Role",
+                "connectedFeature": "FeatureKey"
+            },
+            "addGroup": {
+                "label": "Add Role"
+            },
+            "deleteGroup": {
+                "label": "Delete Role"
+            },
+            "exportGroups": {
+                "label": "Export Roles"
+            },
+            "assignUser": {
+              "label": "Assign Users"
+            }
+        }
     }
 ]

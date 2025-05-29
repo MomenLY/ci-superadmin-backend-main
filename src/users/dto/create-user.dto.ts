@@ -62,6 +62,14 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @IsOptional()
+  @IsString()
+  designation?: string;
+
+  @IsOptional()
+  @IsString()
+  organisation?: string;
 }
 
 export class UserDto {
@@ -120,8 +128,18 @@ export class ForgotPasswordDTO {
 }
 
 export class ResetPasswordDTO {
+  @IsOptional()
+  @IsString()
+  _id?: string
+
   @IsString()
   password: string;
+
+  @IsOptional()
+  @IsBoolean()
+  shouldSendEmail: boolean;
+
+
 }
 
 export class AdminResetPasswordDTO {

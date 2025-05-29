@@ -25,12 +25,10 @@ class ValidationDto {
 
   @IsString()
   @IsDefined()
-  @IsNotEmpty()
   @ValidateIf(o => o.type === 'custom')
   regexPattern: string;
 
   @IsString()
-  @IsNotEmpty()
   errorMessage: string;
 }
 
@@ -69,12 +67,10 @@ export class UpdateProfileFieldDto {
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
   pFPlaceholder: string;
 
   @IsString()
   @IsOptional()
-  @IsNotEmpty()
   pFHelperText: string;
 
   @IsNumber()

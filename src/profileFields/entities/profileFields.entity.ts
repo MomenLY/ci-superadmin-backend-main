@@ -71,4 +71,10 @@ export class ProfileFields extends BaseEntity {
     regexPattern: string;
     errorMessage: string;
   };
+
+  @Column({ nullable: true })
+  pFFormType: string;
+
+  @Column({ default: 0 })
+  pFDefault: number;
 }

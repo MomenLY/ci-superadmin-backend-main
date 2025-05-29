@@ -35,8 +35,21 @@ export const ErrorMessages = {
   BULK_EMAIL_SENDING_ERROR: 'Email sending failed for the email ids: {emailIds}',
   BULK_CREATE_NOTALLOWED_ERROR: 'Does not have permission to create for the email ids: {emailIds}',
   BULK_UPDATE_NOTALLOWED_ERROR: 'Does not have permission to update for the ids: {ids}',
-  EMAIL_ALREADY_TAKEN: 'The following email ids are already taken: {emailIds}',
+  EMAIL_ALREADY_TAKEN: '{emailIds} already exists, please try with another email.',
   EMAIL_ALREADY_TAKEN_ID: 'The email ids for following ids are already taken: {ids}',
+  FIRST_NAME_REQUIRED: 'First Name is requred',
+  LAST_NAME_REQUIRED: 'Last Name is requred',
+  EMAIL_REQUIRED: 'Email is requred',
+  ERROR_ADDING_USER_TENANT_DB: "Error in adding a user in tenant DB. Please contact for support",
+  ERROR_SENDING_REG_EMAIL: "Error in sending tenant registration email",
+  ERROR_ADDING_EMAIL_SUBSCRIPTION_DETAILS: "Error in adding email subscription details to tenant DB",
+  ERROR_CREATING_EMAIL_SUBSCRIPTION: "Error in creating email subscription",
+  ERROR_CREATING_DB: "Error in creating database",
+  ERROR_CREATING_TENANT_ACCOUNT: "Error in creating tenant account",
+  NOT_AUTHORIZED_CREATE_TENANT: "You are not authorzied to create a tenant",
+  ERROR_UPDATING_TENANT_SADB: "Error in updating tenant information in Super Admin DB",
+  ERROR_UPDATING_TENANT_TDB: "Error in updating tenant information in Tenant DB",
+  TENANT_INFO_NOT_FOUND: "Error in fetching tenant information"
 };
 
 export const SuccessMessages = {
@@ -50,4 +63,5 @@ export const SuccessMessages = {
   BULK_USER_UPDATE_SUCCESS: 'User accounts updated successfully',
   BULK_USER_DELETE_SUCCESS: 'User accounts deleted successfully',
   ROLE_DELETE_SUCCESS: 'Role deleted successfully',
+  TENANT_DELETE_SUCCESS: 'Tenant deleted successfully'
 };

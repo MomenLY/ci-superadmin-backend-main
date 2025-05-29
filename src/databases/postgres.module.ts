@@ -11,18 +11,12 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
     TypeOrmModule.forRootAsync({
       imports: [],
       useFactory: async (configService: ConfigService) => {
-        // const primaryDBentities = configService.get(
-        //   'PRIMARY_DB_ENTITIES',
-        // ) as string[];
-        // const regexPattern = new RegExp(primaryDBentities.join('|'));
         const entities = getMetadataArgsStorage()
           // eslint-disable-next-line @typescript-eslint/ban-types
           .tables.map((tbl) => tbl.target as Function)
           .filter((entity) => {
             return (
               entity.toString().toLowerCase().includes('entity')
-              // entity.toString().toLowerCase().includes('entity') &&
-              // regexPattern.test(entity.name)
             );
           });
         return {
@@ -32,11 +26,6 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
           username: TENANT_INFO.dbUserName,
           password: TENANT_INFO.dbPassword,
           database: TENANT_INFO.name,
-          // host: configService.get('POSTGRES_HOST'),
-          // port: configService.get('POSTGRES_PORT'),
-          // username: configService.get('POSTGRES_USER'),
-          // password: configService.get('POSTGRES_PASSWORD'),
-          // database: configService.get('DATABASE_NAME'),
           entities,
           logging: true,
           autoLoadEntities: true,
@@ -46,4 +35,4 @@ const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
     }),
   ],
 })
-export class PostgresModule {}
+export class PostgresModule { }

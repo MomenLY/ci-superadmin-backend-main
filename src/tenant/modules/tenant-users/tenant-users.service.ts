@@ -5,10 +5,11 @@ import { CreateTenantUserDto } from './dto/create-tenant-user.dto';
 import { UpdateTenantUserDto } from './dto/update-tenant-user.dto';
 import { TenantUser } from './entities/tenant-user.entity';
 import { ObjectId } from 'mongodb';
-import { getCache } from 'memcachelibrarybeta';
+import { getCache } from 'onioncache';
 import { isMongoDB } from 'src/utils/helper';
 import { TenantUsersMongoService } from './tenant-users.mongo.service';
 import { TenantUsersPostgresService } from './tenant-users.postgres.service';
+import { response } from 'express';
 
 @Injectable()
 export class TenantUsersService {
@@ -19,7 +20,7 @@ export class TenantUsersService {
     private userMongoService: TenantUsersMongoService,
     private userPostgresService: TenantUsersPostgresService,
     private readonly mainDataSource: DataSource,
-  ) {}
+  ) { }
 
   async findOne(_id: any): Promise<TenantUser> {
     const getUserById = async (_id: any) => {
@@ -29,6 +30,10 @@ export class TenantUsersService {
       return this.userPostgresService.findOne(this.userRepository, _id);
     };
     return getCache(_id, getUserById, _id);
+  }
+
+  async findOneByIdentifier(identifier: string) {
+    return this.userRepository.findOne({ where: { tenantIdentifier: identifier } })
   }
 
   async findOneByEmail(email: string): Promise<TenantUser> {
@@ -68,4 +73,9 @@ export class TenantUsersService {
     }
   }
 
+  async deleteTenantUser(email: string) {
+    const tenantUser = await this.userRepository.findOne({ where: { email: email } })
+    const response = await this.userRepository.remove(tenantUser);
+    return response
+  }
 }

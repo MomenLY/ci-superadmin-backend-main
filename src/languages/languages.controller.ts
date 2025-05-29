@@ -2,13 +2,13 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, BadRequestException,
 import { LanguagesService } from './languages.service';
 import { CreateLanguageDto } from './dto/create-language.dto';
 import { UpdateLanguageDto } from './dto/update-language.dto';
-import { Public } from 'src/auth/auth.decorator';
+import { BypassAuth, Public } from 'src/auth/auth.decorator';
 import { validateLanguageData } from 'src/utils/helper';
 import { FindLanguageDto } from './dto/find-language.dto';
 
 @Controller('languages')
 export class LanguagesController {
-  constructor(private readonly languagesService: LanguagesService) {}
+  constructor(private readonly languagesService: LanguagesService) { }
 
   @Post()
   async create(@Body() createLanguageDto: CreateLanguageDto) {
@@ -18,6 +18,12 @@ export class LanguagesController {
     } catch (error) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  @BypassAuth()
+  @Get('json/:lang')
+  findOne(@Param('lang') lang: string) {
+    return this.languagesService.findByLanguage(lang);
   }
 
   @Public()
@@ -30,7 +36,7 @@ export class LanguagesController {
   ) {
     return this.languagesService.findAll(lang, page, limit, search);
   }
-  
+
   @Public()
   @Post('find-by-keys')
   findByKeys(

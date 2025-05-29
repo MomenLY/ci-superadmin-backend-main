@@ -15,7 +15,7 @@ const dbName = process.env.DATABASE_NAME;
 const dbType = process.env.DB_TYPE;
 const TENANT_INFO = JSON.parse(process.env.TENANT_INFO);
 let TARGET_DB = 'superadmin-db';
-const recurMigrationProcess = async (tenants: any[], cb = () => {}) => {
+const recurMigrationProcess = async (tenants: any[], cb = () => { }) => {
   try {
     if (tenants.length > 0) {
       const client = tenants.shift();
@@ -33,17 +33,6 @@ const RunMigration = async () => {
   try {
     let tenants: any = [];
     if (TARGET_DB === 'superadmin-db') {
-      // let pool = new Pool({
-      //   user: dbUsername,
-      //   host: dbHost,
-      //   database: dbName,
-      //   password: dbPassword,
-      //   port: dbPort,
-      // });
-      // const res = await pool.query('SELECT * FROM tenant');
-      // tenants = res.rows;
-      // await pool.end();
-      // pool = null;
       tenants = [TENANT_INFO];
     } else {
       tenants = [{ name: dbName }];
@@ -72,7 +61,7 @@ const init = async () => {
       .help().argv;
     TARGET_DB = argv.target || TARGET_DB;
     RunMigration();
-  } catch (error) {}
+  } catch (error) { }
 };
 
 init();

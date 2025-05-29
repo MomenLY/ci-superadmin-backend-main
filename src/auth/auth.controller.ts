@@ -12,7 +12,7 @@ import { SignInDto } from './dto/signIn.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Public()
   @BypassAuth()

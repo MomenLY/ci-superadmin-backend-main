@@ -32,9 +32,9 @@ describe('MasterDataService', () => {
   describe('create', () => {
     it('should create a new MasterData', async () => {
       const createMasterDataDto: CreateMasterDataDto = {
-        mDName:"Name",
+        mDName: "Name",
         mDDataCollections: {
-          sunday:"Funday"
+          sunday: "Funday"
         }
       };
       const savedMasterData = new MasterData();
@@ -51,25 +51,4 @@ describe('MasterDataService', () => {
       expect(result).toEqual(savedMasterData);
     });
   });
-
-  // // Add more test cases for other methods
-  // describe('findAll', () => {
-  //   // ...
-  // });
-
-  // describe('findOne', () => {
-  //   // ...
-  // });
-
-  // describe('update', () => {
-  //   // ...
-  // });
-
-  // describe('batchUpdate', () => {
-  //   // ...
-  // });
-
-  // describe('remove', () => {
-  //   // ...
-  // });
 });

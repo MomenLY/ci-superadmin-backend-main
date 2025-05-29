@@ -36,7 +36,7 @@ export class User extends BaseEntity {
 
   @Column({ unique: true, nullable: true })
   phoneNumber: string;
-
+  
   @Column({ nullable: true })
   country: string;
 
@@ -51,6 +51,10 @@ export class User extends BaseEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   profileFields: string;
+
+  @Column({ nullable: true })
+  userImage: string;
+
   @Column({ default: 1 })
   enforcePasswordReset: number;
 
@@ -59,4 +63,10 @@ export class User extends BaseEntity {
 
   @UpdateDateColumn({ nullable: true })
   updatedAt: Date;
+
+  @Column({ nullable: true })
+  designation: string;
+
+  @Column({ nullable: true })
+  organisation: string;
 }

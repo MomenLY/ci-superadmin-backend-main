@@ -1,6 +1,6 @@
 import { Tenant } from 'src/tenant/entities/tenant.entity';
 import { REPLACE_ID, TENANT_CHACHE_KEY } from './cache-keys';
-import { getCache } from 'memcachelibrarybeta';
+import { getCache } from 'onioncache';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { MongoConnectionOptions } from 'typeorm/driver/mongodb/MongoConnectionOptions';
 import { DataSource, getMetadataArgsStorage } from 'typeorm';

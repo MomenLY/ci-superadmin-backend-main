@@ -43,7 +43,7 @@ export class UsersPostgresHelper {
   findRolesByIds(roleRepository, roleChunk) {
     return roleRepository.find({
       where: { _id: In(roleChunk) }, 
-      select: ['_id', 'roleType'],
+      select: ['_id', 'roleType', 'name'],
     });
   }
 
